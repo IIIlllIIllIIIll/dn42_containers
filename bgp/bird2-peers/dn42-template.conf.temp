@@ -1,0 +1,42 @@
+# protocol bgp dn42_<对方的ASN>_v4 from dnpeers {
+#     # 设置成我的（或者你的 Peer 的）DN42 IPv4 地址以及 ASN
+#     neighbor <对方的 IPV4 地址> as <对方的ASN>;
+#     direct;
+#
+#    ipv4 {
+#        import where dn42_import_v4_filter(); # https://dn42.dev/howto/Bird-communities
+#        export where dn42_export_v4_filter(); # https://dn42.dev/howto/Bird-communities
+#    };
+#
+#     # 在 IPv4 BGP 中禁用 IPv6 路由传递，强烈推荐保留以下内容
+#     ipv6 {
+#         import none;
+#         export none;
+#     };
+# };
+
+protocol bgp dn42_<对方的ASN>_v6 from dnpeers {
+    # 设置成我的（或者你的 Peer 的）DN42 IPV6 或者Link-local IPv6，隧道名称，以及 ASN
+    neighbor <对方的 IPV6 地址> % '<网卡名字>' as <对方的ASN>;
+    direct;
+
+    ipv6 {
+        import where dn42_import_v6_filter(); # https://dn42.dev/howto/Bird-communities
+        export where dn42_export_v6_filter(); # https://dn42.dev/howto/Bird-communities
+    };
+
+    # 在 IPv6 BGP 中启用 IPv4 路由传递
+    # 如对方不使用 Multiprotocol BGP（MP-BGP），则注释以下内容
+    ipv4 {
+        import where dn42_import_v4_filter(); # https://dn42.dev/howto/Bird-communities
+        export where dn42_export_v4_filter(); # https://dn42.dev/howto/Bird-communities
+    };
+
+    # 在 IPv6 BGP 中禁用 IPv4 路由传递
+    # 如对方也使用 Multiprotocol BGP（MP-BGP），则注释以下内容
+    # ipv4 {
+    #     import none;
+    #     export none;
+    # };
+};
+

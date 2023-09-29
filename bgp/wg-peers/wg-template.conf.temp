@@ -1,0 +1,13 @@
+[Interface]
+PrivateKey = <Your wireguard wireguard private-key>
+ListenPort = <自己的端口> # 根据对方的ASN后5位决定
+Table = off # 不要自动添加路由
+
+# 如果对方不支持 extended next hop, 取消以下注释:
+# PostUp = /sbin/ip addr add dev %i <自己的 IPv4>/32 peer <PeerIPv4>/32
+PostUp = /sbin/ip addr add dev %i <自己的 IPv6>/128 peer <PeerIPv6>/128
+
+[Peer]
+Endpoint = <对方的地址>:<对方的端口>
+PublicKey = <对方的公钥>
+AllowedIPs = 172.16.0.0/12, 10.0.0.0/8, fd00::/8, fe80::/10

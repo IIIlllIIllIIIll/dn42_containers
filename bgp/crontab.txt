@@ -1,0 +1,2 @@
+*/15 * * * * ( curl -sfSLR -o/etc/bird/roa_dn42.conf -z/etc/bird/roa_dn42.conf https://dn42.burble.com/roa/dn42_roa_bird2_4.conf && curl -sfSLR -o/etc/bird/roa_dn42_v6.conf -z/etc/bird/roa_dn42_v6.conf https://dn42.burble.com/roa/dn42_roa_bird2_6.conf && /usr/local/sbin/birdc configure ) > /proc/1/fd/1 2>/proc/1/fd/2
+*/5 * * * * ( find /etc/wireguard/ -type f -name '*.conf' -exec /usr/local/bin/wg-reresolve-dns.sh {} \; ) > /proc/1/fd/1 2>/proc/1/fd/2

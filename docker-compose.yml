@@ -1,0 +1,115 @@
+version: "3.9"
+services:
+  # BGP服务
+  bgp:
+    build: ./bgp
+    volumes:
+      - ./bgp/bird2-peers/:/etc/bird/peers/:rw
+      - ./bgp/bird.conf:/etc/bird/bird.conf:rw
+      - ./bgp/community_filters.conf:/etc/bird/community_filters.conf:rw
+      - ./bgp/log:/log:rw
+
+      - ./bgp/wg-peers:/etc/wireguard/:rw
+
+      - /lib/modules:/lib/modules
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - "net.ipv4.ip_forward=1"
+      - "net.ipv6.conf.all.disable_ipv6=0"
+      - "net.ipv6.conf.all.forwarding=1" # 必须为container开启v6 forwarding，因为它默认不会继承init_net的值，参考：https://unix.stackexchange.com/questions/690999/ipv6-forwarding-doesnt-work-in-a-network-namespace
+      # 此外，如果host上使用的防火墙是 firewalld ，务必在 firewalld 中设置IPv6_rpfilter=no，否则数据包将无法被转发到别的服务
+      - "net.ipv4.conf.all.rp_filter=0" # 允许数据包去程和回程不一致的情况，这在dn42网络中非常常见，并且在存在多个RS的情况下十分重要
+      - "net.ipv4.conf.default.rp_filter=0"
+    networks:
+      dn42-net:
+        ipv4_address: <容器 dn42 ipv4 地址>
+        ipv6_address: <容器 dn42 ipv6 地址>
+    # ports:
+    #   # - "20000-29999:20000-29999/udp" 不要使用这行去转发 10000 个端口, docker 会创建 10000 条 iptables rules. 使用 bgp_ports.sh 转发端口!
+    restart: always
+    logging:
+      options:
+        max-size: 1m
+
+  # # dns服务
+  dns:
+    build: ./bind9
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./bind9/named.conf:/etc/bind/named.conf:rw
+      - ./bind9/zones:/etc/bind/zones:rw
+      - ./bind9/dnssec_keys:/etc/bind/dnssec_keys:rw
+      
+      - ./bind9/cached:/var/cache/bind:rw
+      - ./bind9/resource:/var/lib/bind:rw
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+    networks:
+      dn42-net:
+        ipv4_address: <容器 dn42 ipv4 地址>
+        ipv6_address: <容器 dn42 ipv6 地址>
+    environment:
+      - DN42_GATEWAY_V4=<bgp ipv4 地址>
+      - DN42_GATEWAY_V6=<bgp ipv6 地址>
+    depends_on:
+      bgp: 
+        condition: service_started
+    restart: always
+    logging:
+      options:
+        max-size: 1m
+
+  # # nat服务
+  nat:
+    build: ./nat
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - "net.ipv4.ip_forward=1"
+      - "net.ipv6.conf.all.disable_ipv6=0"
+      - "net.ipv6.conf.all.forwarding=1" # 必须为container开启v6 forwarding，因为它默认不会继承init_net的值，参考：https://unix.stackexchange.com/questions/690999/ipv6-forwarding-doesnt-work-in-a-network-namespace
+      # 此外，如果host上使用的防火墙是 firewalld ，务必在 firewalld 中设置IPv6_rpfilter=no，否则数据包将无法被转发到别的服务
+    volumes:
+      - /lib/modules:/lib/modules
+    environment:
+      - DN42_GATEWAY_V4=<bgp ipv4 地址>
+      - DN42_GATEWAY_V6=<bgp ipv6 地址>
+      - NET_LOCAL=<本地局域网 ipv4 地址>
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+    depends_on:
+      bgp:
+        condition: service_started
+      dns:
+        condition: service_started
+    networks:
+      dn42-net:
+        ipv4_address: <容器 dn42 ipv4 地址>
+        ipv6_address: <容器 dn42 ipv6 地址>
+    dns:
+      - <dns ipv4 地址>
+      - <dns ipv6 地址>
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: 1m
+
+
+networks:
+  default:
+  dn42-net:
+    name: dn42_bridge
+    driver: bridge
+    enable_ipv6: true
+    internal: false # 控制能否通过host访问外部网络。需要设置为false，否则docker生成的防火墙规则会阻止其余服务将数据包转发到bgp服务
+    ipam:
+      driver: default
+      config:
+        - subnet: <dn42 ipv4 subnet>
+        - subnet: <dn42 ipv6 subnet>
