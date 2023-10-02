@@ -2,4 +2,4 @@
 
 ## Credits
 
-[dn42-stuffs](https://github.com/KB5201314/dn42-stuffs)
+Inspired by [dn42-stuffs](https://github.com/KB5201314/dn42-stuffs)
