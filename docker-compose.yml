@@ -35,7 +35,7 @@ services:
       options:
         max-size: 1m
 
-  # # dns服务
+  # dns服务
   dns:
     build: ./bind9
     cap_add:
@@ -64,7 +64,7 @@ services:
       options:
         max-size: 1m
 
-  # # nat服务
+  # nat服务
   nat:
     build: ./nat
     cap_add:
